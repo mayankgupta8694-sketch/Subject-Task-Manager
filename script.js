@@ -26,6 +26,11 @@ const completedTasks = document.getElementById("completedTasks");
 
 let editTaskId = null;
 
+if (!localStorage.getItem("loggedInUser")) {
+    window.location.href = "login.html";
+}
+
+
 // ---------- STORAGE ----------
 function getData() {
     return JSON.parse(localStorage.getItem("subjectData")) || {};
@@ -254,6 +259,11 @@ function clearInputs() {
     deadlineInput.value = "";
     priorityInput.value = "";
 }
+function logout() {
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "login.html";
+}
+
 
 // ---------- INIT ----------
 renderSubjects();
