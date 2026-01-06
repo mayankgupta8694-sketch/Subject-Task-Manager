@@ -1,4 +1,3 @@
-// ---------- SUBJECT LOGIC ----------
 const subjectInput = document.getElementById("subjectInput");
 const addSubjectBtn = document.getElementById("addSubjectBtn");
 const subjectList = document.getElementById("subjectList");
@@ -9,7 +8,6 @@ const currentSubjectHeading = document.getElementById("currentSubject");
 
 let currentSubject = null;
 
-// ---------- TASK ELEMENTS ----------
 const taskNameInput = document.getElementById("taskName");
 const deadlineInput = document.getElementById("deadline");
 const priorityInput = document.getElementById("priority");
@@ -30,8 +28,6 @@ if (!localStorage.getItem("loggedInUser")) {
     window.location.href = "login.html";
 }
 
-
-// ---------- STORAGE ----------
 function getData() {
     return JSON.parse(localStorage.getItem("subjectData")) || {};
 }
@@ -40,7 +36,6 @@ function saveData(data) {
     localStorage.setItem("subjectData", JSON.stringify(data));
 }
 
-// ---------- SUBJECT FUNCTIONS ----------
 addSubjectBtn.onclick = () => {
     const subject = subjectInput.value.trim();
     if (!subject) return;
@@ -78,12 +73,10 @@ function renderSubjects() {
             <small>${percent}% completed</small>
         `;
 
-        // Open subject (click on name / progress area)
         li.onclick = () => openSubject(subject);
-
-        // Delete subject
+ 
         li.querySelector(".subject-delete").onclick = (e) => {
-            e.stopPropagation(); // prevent opening subject
+            e.stopPropagation(); 
             deleteSubject(subject);
         };
 
@@ -118,7 +111,6 @@ backBtn.onclick = () => {
     subjectSection.classList.remove("hidden");
 };
 
-// ---------- TASK LOGIC ----------
 addTaskBtn.onclick = () => {
     const name = taskNameInput.value.trim();
     const deadline = deadlineInput.value;
@@ -159,7 +151,6 @@ addTaskBtn.onclick = () => {
 searchInput.oninput = renderTasks;
 calendarFilter.onchange = renderTasks;
 
-// ---------- RENDER TASKS ----------
 function renderTasks() {
     highTasks.innerHTML = "";
     mediumTasks.innerHTML = "";
@@ -188,7 +179,7 @@ function renderTasks() {
     });
 }
 
-// ---------- TASK UI ----------
+
 function createActiveTask(task) {
     const li = document.createElement("li");
     li.className = "task-item";
@@ -226,7 +217,6 @@ function createCompletedTask(task) {
     return li;
 }
 
-// ---------- ACTIONS ----------
 function toggleComplete(id) {
     const data = getData();
     data[currentSubject] = data[currentSubject].map(t => {
@@ -264,6 +254,4 @@ function logout() {
     window.location.href = "login.html";
 }
 
-
-// ---------- INIT ----------
 renderSubjects();

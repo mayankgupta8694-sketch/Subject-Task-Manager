@@ -1,21 +1,17 @@
-// Show register form
 function showRegister() {
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("registerBox").classList.remove("hidden");
 }
 
-// Show login form
 function showLogin() {
     document.getElementById("registerBox").classList.add("hidden");
     document.getElementById("loginBox").classList.remove("hidden");
 }
 
-// Get users from LocalStorage
 function getUsers() {
     return JSON.parse(localStorage.getItem("users")) || [];
 }
 
-// Register new user
 function register() {
     const username = document.getElementById("regUsername").value.trim();
     const email = document.getElementById("regEmail").value.trim();
@@ -28,7 +24,6 @@ function register() {
 
     const users = getUsers();
 
-    // Check if username already exists
     if (users.some(user => user.username === username)) {
         alert("Username already exists");
         return;
@@ -41,7 +36,7 @@ function register() {
     showLogin();
 }
 
-// Login user
+
 function login() {
     const username = document.getElementById("loginUsername").value.trim();
     const password = document.getElementById("loginPassword").value.trim();
@@ -57,11 +52,9 @@ function login() {
         return;
     }
 
-    // Save logged-in user
     localStorage.setItem("loggedInUser", username);
 
     alert("Login successful!");
 
-    // Redirect to main app
     window.location.href = "index.html";
 }
