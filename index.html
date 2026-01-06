@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Task & Deadline Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- SUBJECT SECTION -->
+    <div id="subjectSection">
+        <h1>Manage Your Subjects</h1>
+
+        <div class="task-input">
+            <input type="text" id="subjectInput" placeholder="Enter subject name">
+            <button id="addSubjectBtn">Add Subject</button>
+        </div>
+
+       <h2>Your Subjects</h2>
+            <ul id="subjectList" class="subject-list"></ul>
+
+    </div>
+
+    <!-- TASK SECTION -->
+    <div id="taskSection" class="hidden">
+        <h1 id="currentSubject"></h1>
+
+        <div class="filters">
+            <input type="text" id="searchInput" placeholder="Search tasks...">
+            <input type="date" id="calendarFilter">
+        </div>
+
+        <div class="task-input">
+            <input type="text" id="taskName" placeholder="Enter task name">
+            <input type="date" id="deadline">
+            <select id="priority">
+                <option value="">Select Priority</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+            <button id="addTaskBtn">Add Task</button>
+        </div>
+
+        <div class="task-list">
+            <h2>High Priority</h2>
+            <ul id="highTasks"></ul>
+
+            <h2>Medium Priority</h2>
+            <ul id="mediumTasks"></ul>
+
+            <h2>Low Priority</h2>
+            <ul id="lowTasks"></ul>
+
+            <h2>Completed Tasks</h2>
+            <ul id="completedTasks"></ul>
+        </div>
+
+        <button id="backBtn">← Back to Subjects</button>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
