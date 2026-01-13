@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Student Task Manager</h1>
+        <span>Welcome, {{ session.username }}</span>
+        <a href="/logout"><button class="logout-btn">Logout</button></a>
+    </div>
+
+    <h2>Your Subjects</h2>
+    <div class="task-input">
+        <input id="subjectInput" placeholder="Enter subject name">
+        <button type="button" class="add-btn" onclick="addSubject()">Add Subject</button>
+    </div>
+
+    <ul id="subjectList"></ul>
+
+    <h2 id="taskTitle">Tasks</h2>
+    <div class="task-input">
+        <input id="taskName" placeholder="Task name">
+        <input type="date" id="taskDeadline">
+        <select id="taskPriority">
+            <option value="">Priority</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+        </select>
+        <button type="button" onclick="addTask()">Add Task</button>
+    </div>
+
+    <input type="date" id="calendarFilter" onchange="loadTasks()">
+    <input id="searchInput" placeholder="Search tasks..." onkeyup="loadTasks()">
+
+    <ul id="taskList"></ul>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

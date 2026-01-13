@@ -1,0 +1,231 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    background-color: #f4f6f8;
+    min-height: 100vh;
+    padding: 30px;
+}
+
+
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+}
+
+input, select {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.auth-container {
+    width: 350px;
+    margin: 80px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    text-align: center;
+}
+
+.auth-container h2 {
+    margin-bottom: 15px;
+}
+
+.auth-container input {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.auth-container button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+}
+
+/* ---------- DASHBOARD ---------- */
+.container {
+    max-width: 900px;
+    margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logout-btn {
+    background-color: #e74c3c;
+    color: white;
+    padding: 8px 12px;
+}
+
+/* ---------- SUBJECT LIST ---------- */
+.subject-list li {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.subject-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.subject-delete {
+    background-color: #e74c3c;
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+/* ---------- PROGRESS BAR ---------- */
+.progress-bar {
+    background-color: #ddd;
+    height: 8px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.progress {
+    background-color: #4CAF50;
+    height: 100%;
+    width: 0%;
+}
+
+/* ---------- TASKS ---------- */
+.task-input, .filters {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.task-list h2 {
+    margin-top: 20px;
+    border-bottom: 2px solid #ddd;
+}
+
+ul {
+    list-style: none;
+}
+
+.task-item {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.task-item button {
+    margin-top: 6px;
+    margin-right: 5px;
+    padding: 5px 8px;
+    font-size: 12px;
+    color: white;
+}
+.add-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 5px;
+}
+
+
+.complete-btn { background-color: #3498db; }
+.edit-btn { background-color: #f39c12; }
+.delete-btn { background-color: #e74c3c; }
+
+.completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+    background-color: #eeeeee;
+}
+/* ---------- TASK BUTTONS ---------- */
+
+/* Add Task button */
+.task-input button {
+    background-color: #4CAF50;   /* Green */
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+}
+
+.task-input button:hover {
+    background-color: #43a047;
+}
+
+/* Done / Undo button */
+.task-item button:first-of-type {
+    background-color: #3498db;   /* Blue */
+}
+
+.task-item button:first-of-type:hover {
+    background-color: #2e86c1;
+}
+
+/* Delete button */
+.task-item button:last-of-type {
+    background-color: #e74c3c;   /* Red */
+}
+
+.task-item button:last-of-type:hover {
+    background-color: #c0392b;
+}
+/* ---------- TASK FILTERS ---------- */
+.filters {
+    margin: 10px 0;
+}
+
+.filters input {
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+/* ---------- EDIT BUTTON ---------- */
+.task-item button:nth-of-type(2) {
+    background-color: #f39c12;   /* Orange */
+    color: white;
+}
+
+.task-item button:nth-of-type(2):hover {
+    background-color: #e67e22;
+}
+.center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.task-section {
+    width: 100%;
+    max-width: 700px;
+}
+
+.task-section h3 {
+    margin-top: 20px;
+    border-bottom: 2px solid #ddd;
+}
+
+.task-input,
+.filters {
+    justify-content: center;
+    gap: 10px;
+}
+
