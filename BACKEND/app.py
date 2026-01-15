@@ -9,7 +9,8 @@ import bcrypt
 
 
 app = Flask(__name__)
-app.secret_key = "secret_key_123"
+app.secret_key = os.getenv("SECRET_KEY")
+
 
 # -------- MYSQL CONFIG --------
 app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
@@ -201,6 +202,7 @@ def delete_task(id):
     cur.close()
     return jsonify({'message': 'Deleted'})
 
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
+
+
