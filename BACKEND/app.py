@@ -5,18 +5,18 @@ from dotenv import load_dotenv
 load_dotenv()
 import bcrypt
 
-
-
-
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 
 
 # -------- MYSQL CONFIG --------
-app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
+import os
+
+app.config['MYSQL_HOST'] = os.getenv('MYSQLHOST')
+app.config['MYSQL_USER'] = os.getenv('MYSQLUSER')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQLPASSWORD')
+app.config['MYSQL_DB'] = os.getenv('MYSQLDATABASE')
+app.config['MYSQL_PORT'] = int(os.getenv('MYSQLPORT', 3306))
 
 app.secret_key = os.getenv('SECRET_KEY')
 mysql = MySQL(app)
@@ -204,5 +204,6 @@ def delete_task(id):
 
 if __name__ == "__main__":
     app.run()
+
 
 
