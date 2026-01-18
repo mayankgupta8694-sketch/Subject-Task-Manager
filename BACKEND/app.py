@@ -1,211 +1,218 @@
-from flask import Flask, render_template, request, redirect, session, url_for, jsonify
-from flask_mysqldb import MySQL
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import pymysql
 import bcrypt
 
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
-import pymysql
+# VERY IMPORTANT for compatibility
 pymysql.install_as_MySQLdb()
 
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev_secret_key")
 
-# -------- MYSQL CONFIG --------
-import os
+# -------------------------
+# DATABASE CONNECTION
+# -------------------------
+def get_db_connection():
+    return pymysql.connect(
+        host=os.environ.get("MYSQLHOST"),
+        user=os.environ.get("MYSQLUSER"),
+        password=os.environ.get("MYSQLPASSWORD"),
+        database=os.environ.get("MYSQLDATABASE"),
+        port=int(os.environ.get("MYSQLPORT", 3306)),
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
-app.config['MYSQL_HOST'] = os.getenv('MYSQLHOST')
-app.config['MYSQL_USER'] = os.getenv('MYSQLUSER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQLPASSWORD')
-app.config['MYSQL_DB'] = os.getenv('MYSQLDATABASE')
-app.config['MYSQL_PORT'] = int(os.getenv('MYSQLPORT', 3306))
+# -------------------------
+# CREATE TABLES (AUTO)
+# -------------------------
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-app.secret_key = os.getenv('SECRET_KEY')
-mysql = MySQL(app)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL
+    )
+    """)
 
-# -------- AUTH PROTECTION --------
-@app.before_request
-def protect_routes():
-    allowed = ['login_page', 'login', 'register', 'static']
-    if request.endpoint not in allowed and 'user_id' not in session:
-        return redirect(url_for('login_page'))
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS subjects (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        name VARCHAR(100),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+    """)
 
-# -------- AUTH ROUTES --------
-@app.route('/')
-def login_page():
-    return render_template('login.html')
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        subject_id INT,
+        title VARCHAR(200),
+        deadline DATE,
+        priority VARCHAR(20),
+        completed BOOLEAN DEFAULT FALSE,
+        FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+    )
+    """)
 
+    conn.commit()
+    conn.close()
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
+# Run once at startup
+init_db()
 
-        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-
-        cur = mysql.connection.cursor()
-        cur.execute(
-            "INSERT INTO users (username, email, password) VALUES (%s,%s,%s)",
-            (username, email, hashed)
-        )
-        mysql.connection.commit()
-        cur.close()
-
-        return redirect(url_for('login_page'))
-
-    return render_template('register.html')
-
-
-@app.route('/login', methods=['POST'])
+# -------------------------
+# AUTH ROUTES
+# -------------------------
+@app.route("/", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    username = request.form['username']
-    password = request.form['password']
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
 
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM users WHERE username=%s", (username,))
-    user = cur.fetchone()
-    cur.close()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
+        user = cursor.fetchone()
+        conn.close()
 
-    if user and bcrypt.checkpw(password.encode(), user[3].encode()):
-        session['user_id'] = user[0]
-        session['username'] = user[1]
-        return redirect(url_for('dashboard'))
+        if user and bcrypt.checkpw(password.encode(), user["password"].encode()):
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            return redirect(url_for("dashboard"))
 
-    return "Invalid credentials"
+        return "Invalid credentials"
+
+    return render_template("login.html")
 
 
-@app.route('/logout')
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = bcrypt.hashpw(
+            request.form["password"].encode(), bcrypt.gensalt()
+        ).decode()
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (username, email, password) VALUES (%s,%s,%s)",
+            (username, email, password)
+        )
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+
+@app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for('login_page'))
+    return redirect(url_for("login"))
 
-# -------- DASHBOARD --------
-@app.route('/dashboard')
+# -------------------------
+# DASHBOARD
+# -------------------------
+@app.route("/dashboard")
 def dashboard():
-    return render_template('index.html')
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return render_template("index.html", username=session["username"])
 
-# -------- SUBJECT API --------
-@app.route('/api/subjects', methods=['GET', 'POST'])
-def subjects_api():
-    user_id = session['user_id']
-    cur = mysql.connection.cursor()
+# -------------------------
+# SUBJECT APIs
+# -------------------------
+@app.route("/api/subjects", methods=["GET", "POST"])
+def subjects():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
 
-    if request.method == 'GET':
-        cur.execute("""
-            SELECT s.id, s.subject_name,
-            COUNT(t.id),
-            SUM(CASE WHEN t.completed=1 THEN 1 ELSE 0 END)
-            FROM subjects s
-            LEFT JOIN tasks t ON s.id=t.subject_id
-            WHERE s.user_id=%s
-            GROUP BY s.id
-        """, (user_id,))
-        rows = cur.fetchall()
-        cur.close()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        subjects = []
-        for r in rows:
-            total = r[2] or 0
-            done = r[3] or 0
-            progress = int((done/total)*100) if total else 0
-            subjects.append({
-                'id': r[0],
-                'name': r[1],
-                'progress': progress
-            })
+    if request.method == "POST":
+        name = request.json["name"]
+        cursor.execute(
+            "INSERT INTO subjects (user_id, name) VALUES (%s,%s)",
+            (session["user_id"], name)
+        )
+        conn.commit()
 
-        return jsonify({'subjects': subjects})
-
-    data = request.get_json()
-    cur.execute(
-        "INSERT INTO subjects (user_id, subject_name) VALUES (%s,%s)",
-        (user_id, data['name'])
+    cursor.execute(
+        "SELECT * FROM subjects WHERE user_id=%s",
+        (session["user_id"],)
     )
-    mysql.connection.commit()
-    cur.close()
+    data = cursor.fetchall()
+    conn.close()
 
-    return jsonify({'message': 'Subject added'})
+    return jsonify(data)
 
-
-@app.route('/api/subjects/<int:id>', methods=['DELETE'])
-def delete_subject(id):
-    cur = mysql.connection.cursor()
-    cur.execute("DELETE FROM subjects WHERE id=%s", (id,))
-    mysql.connection.commit()
-    cur.close()
-    return jsonify({'message': 'Deleted'})
-
-# -------- TASK API --------
-@app.route('/api/tasks/<int:subject_id>', methods=['GET', 'POST'])
+# -------------------------
+# TASK APIs
+# -------------------------
+@app.route("/api/tasks/<int:subject_id>", methods=["GET", "POST"])
 def tasks(subject_id):
-    cur = mysql.connection.cursor()
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
 
-    if request.method == 'GET':
-        cur.execute("""
-            SELECT id, task_name, deadline, priority, completed
-            FROM tasks WHERE subject_id=%s
-        """, (subject_id,))
-        rows = cur.fetchall()
-        cur.close()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        return jsonify({'tasks': [
-            {
-                'id': r[0],
-                'name': r[1],
-                'deadline': str(r[2]),
-                'priority': r[3],
-                'completed': bool(r[4])
-            } for r in rows
-        ]})
+    if request.method == "POST":
+        data = request.json
+        cursor.execute("""
+            INSERT INTO tasks (subject_id, title, deadline, priority)
+            VALUES (%s,%s,%s,%s)
+        """, (subject_id, data["title"], data["deadline"], data["priority"]))
+        conn.commit()
 
-    data = request.get_json()
-    cur.execute("""
-        INSERT INTO tasks (subject_id, task_name, deadline, priority)
-        VALUES (%s,%s,%s,%s)
-    """, (subject_id, data['name'], data['deadline'], data['priority']))
-    mysql.connection.commit()
-    cur.close()
-
-    return jsonify({'message': 'Task added'})
-
-
-@app.route('/api/tasks/update/<int:id>', methods=['PUT'])
-def update_task(id):
-    cur = mysql.connection.cursor()
-    cur.execute(
-        "UPDATE tasks SET completed=%s WHERE id=%s",
-        (request.json['completed'], id)
+    cursor.execute(
+        "SELECT * FROM tasks WHERE subject_id=%s ORDER BY priority DESC, deadline ASC",
+        (subject_id,)
     )
-    mysql.connection.commit()
-    cur.close()
-    return jsonify({'message': 'Updated'})
+    tasks = cursor.fetchall()
+    conn.close()
 
+    return jsonify(tasks)
 
-@app.route('/api/tasks/edit/<int:id>', methods=['PUT'])
-def edit_task(id):
-    data = request.json
-    cur = mysql.connection.cursor()
-    cur.execute("""
-        UPDATE tasks SET task_name=%s, deadline=%s, priority=%s
-        WHERE id=%s
-    """, (data['name'], data['deadline'], data['priority'], id))
-    mysql.connection.commit()
-    cur.close()
-    return jsonify({'message': 'Edited'})
+# -------------------------
+# MARK TASK DONE
+# -------------------------
+@app.route("/api/task/done/<int:task_id>", methods=["POST"])
+def mark_done(task_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE tasks SET completed=TRUE WHERE id=%s",
+        (task_id,)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
+# -------------------------
+# DELETE TASK
+# -------------------------
+@app.route("/api/task/delete/<int:task_id>", methods=["DELETE"])
+def delete_task(task_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM tasks WHERE id=%s", (task_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
-@app.route('/api/tasks/delete/<int:id>', methods=['DELETE'])
-def delete_task(id):
-    cur = mysql.connection.cursor()
-    cur.execute("DELETE FROM tasks WHERE id=%s", (id,))
-    mysql.connection.commit()
-    cur.close()
-    return jsonify({'message': 'Deleted'})
-
+# -------------------------
+# RUN (Render uses gunicorn)
+# -------------------------
 if __name__ == "__main__":
     app.run()
-
-
-
