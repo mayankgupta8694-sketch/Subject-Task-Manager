@@ -7,6 +7,8 @@ import bcrypt
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
+import pymysql
+pymysql.install_as_MySQLdb()
 
 
 # -------- MYSQL CONFIG --------
