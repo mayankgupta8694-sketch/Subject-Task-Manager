@@ -43,24 +43,21 @@ function loadSubjects() {
         });
 }
 
-function addSubject() {
-    const input = document.getElementById('subjectInput');
-    const name = input.value.trim();
+async function addSubject() {
+    const name = document.getElementById("subjectInput").value;
 
-    if (!name) {
-        alert("Enter subject name");
-        return;
-    }
+    if (!name) return;
 
-    fetch('/api/subjects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    await fetch("/api/subjects", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify({ name })
-    })
-    .then(() => {
-        input.value = '';
-        loadSubjects();
     });
+
+    document.getElementById("subjectInput").value = "";
+    loadSubjects();
 }
 
 function deleteSubject(id) {
@@ -148,20 +145,27 @@ function loadTasks() {
         });
 }
 
-function addTask() {
-    if (!currentSubjectId) {
-        alert("Select a subject first");
-        return;
-    }
+async function addTask(subjectId) {
+    const title = document.getElementById("taskTitle").value;
+    const deadline = document.getElementById("taskDeadline").value;
+    const priority = document.getElementById("taskPriority").value;
 
-    const name = document.getElementById('taskName').value.trim();
-    const deadline = document.getElementById('taskDeadline').value;
-    const priority = document.getElementById('taskPriority').value;
+    if (!title || !deadline || !priority) return;
 
-    if (!name || !deadline || !priority) {
-        alert("Fill all fields");
-        return;
-    }
+    await fetch(`/api/tasks/${subjectId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title,
+            deadline,
+            priority
+        })
+    });
+
+    loadTasks(subjectId);
+}
 
     /* EDIT MODE */
     if (editTaskId) {
@@ -190,7 +194,6 @@ function addTask() {
         loadTasks();
         loadSubjects();
     });
-}
 
 function startEditTask(id, name, deadline, priority) {
     editTaskId = id;

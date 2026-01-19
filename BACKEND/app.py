@@ -140,9 +140,16 @@ def subjects():
     cursor = conn.cursor()
 
     if request.method == "POST":
-        name = request.json["name"]
+        data = request.get_json(silent=True)
+
+        if not data or "name" not in data:
+            conn.close()
+            return jsonify({"error": "Invalid request data"}), 400
+
+        name = data["name"]
+
         cursor.execute(
-            "INSERT INTO subjects (user_id, name) VALUES (%s,%s)",
+            "INSERT INTO subjects (user_id, name) VALUES (%s, %s)",
             (session["user_id"], name)
         )
         conn.commit()
@@ -151,10 +158,10 @@ def subjects():
         "SELECT * FROM subjects WHERE user_id=%s",
         (session["user_id"],)
     )
-    data = cursor.fetchall()
-    conn.close()
+    subjects = cursor.fetchall()
 
-    return jsonify(data)
+    conn.close()
+    return jsonify(subjects)
 
 # -------------------------
 # TASK APIs
@@ -168,17 +175,39 @@ def tasks(subject_id):
     cursor = conn.cursor()
 
     if request.method == "POST":
-        data = request.json
+        data = request.get_json(silent=True)
+
+        if not data:
+            conn.close()
+            return jsonify({"error": "Invalid request data"}), 400
+
+        title = data.get("title")
+        deadline = data.get("deadline")
+        priority = data.get("priority")
+
+        if not title or not deadline or not priority:
+            conn.close()
+            return jsonify({"error": "Missing fields"}), 400
+
         cursor.execute("""
             INSERT INTO tasks (subject_id, title, deadline, priority)
-            VALUES (%s,%s,%s,%s)
-        """, (subject_id, data["title"], data["deadline"], data["priority"]))
+            VALUES (%s, %s, %s, %s)
+        """, (subject_id, title, deadline, priority))
+
         conn.commit()
 
-    cursor.execute(
-        "SELECT * FROM tasks WHERE subject_id=%s ORDER BY priority DESC, deadline ASC",
-        (subject_id,)
-    )
+    cursor.execute("""
+        SELECT * FROM tasks
+        WHERE subject_id=%s
+        ORDER BY
+            CASE priority
+                WHEN 'High' THEN 1
+                WHEN 'Medium' THEN 2
+                WHEN 'Low' THEN 3
+            END,
+            deadline ASC
+    """, (subject_id,))
+
     tasks = cursor.fetchall()
     conn.close()
 
