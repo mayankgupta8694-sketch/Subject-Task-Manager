@@ -44,11 +44,15 @@ function loadSubjects() {
 }
 
 async function addSubject() {
-    const name = document.getElementById("subjectInput").value;
+    const input = document.getElementById("subjectInput");
+    const name = input.value.trim();
 
-    if (!name) return;
+    if (!name) {
+        alert("Enter subject name");
+        return;
+    }
 
-    await fetch("/api/subjects", {
+    const response = await fetch("/api/subjects", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -56,7 +60,12 @@ async function addSubject() {
         body: JSON.stringify({ name })
     });
 
-    document.getElementById("subjectInput").value = "";
+    if (!response.ok) {
+        alert("Failed to add subject");
+        return;
+    }
+
+    input.value = "";
     loadSubjects();
 }
 
