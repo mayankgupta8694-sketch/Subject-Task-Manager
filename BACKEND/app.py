@@ -158,17 +158,20 @@ def subjects():
 
     # GET subjects
     cursor.execute("""
-        SELECT s.id, s.subject_name,
+    SELECT 
+        s.id,
+        s.subject_name AS name,
         IFNULL(
             ROUND(
                 SUM(t.completed = 1) / NULLIF(COUNT(t.id), 0) * 100
             , 0), 0
         ) AS progress
-        FROM subjects s
-        LEFT JOIN tasks t ON s.id = t.subject_id
-        WHERE s.user_id = %s
-        GROUP BY s.id
-    """, (user_id,))
+    FROM subjects s
+    LEFT JOIN tasks t ON s.id = t.subject_id
+    WHERE s.user_id = %s
+    GROUP BY s.id
+""", (user_id,))
+
 
     subjects = cursor.fetchall()
     return jsonify({"subjects": subjects})
