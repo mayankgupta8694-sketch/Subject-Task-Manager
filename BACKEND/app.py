@@ -136,32 +136,43 @@ def subjects():
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
+    user_id = session["user_id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
     if request.method == "POST":
-        data = request.get_json(silent=True)
+        data = request.get_json()
+        subject_name = data.get("name")  # ✅ FIX HERE
 
-        if not data or "name" not in data:
-            conn.close()
-            return jsonify({"error": "Invalid request data"}), 400
-
-        name = data["name"]
+        if not subject_name:
+            return jsonify({"error": "Subject name required"}), 400
 
         cursor.execute(
-            "INSERT INTO subjects (user_id, name) VALUES (%s, %s)",
-            (session["user_id"], name)
+            "INSERT INTO subjects (user_id, subject_name) VALUES (%s, %s)",
+            (user_id, subject_name)
         )
         conn.commit()
 
-    cursor.execute(
-        "SELECT * FROM subjects WHERE user_id=%s",
-        (session["user_id"],)
-    )
-    subjects = cursor.fetchall()
+        return jsonify({"message": "Subject added successfully"})
 
-    conn.close()
-    return jsonify(subjects)
+    # GET subjects
+    cursor.execute("""
+        SELECT s.id, s.subject_name,
+        IFNULL(
+            ROUND(
+                SUM(t.completed = 1) / NULLIF(COUNT(t.id), 0) * 100
+            , 0), 0
+        ) AS progress
+        FROM subjects s
+        LEFT JOIN tasks t ON s.id = t.subject_id
+        WHERE s.user_id = %s
+        GROUP BY s.id
+    """, (user_id,))
+
+    subjects = cursor.fetchall()
+    return jsonify({"subjects": subjects})
+
 
 # -------------------------
 # TASK APIs
@@ -175,70 +186,73 @@ def tasks(subject_id):
     cursor = conn.cursor()
 
     if request.method == "POST":
-        data = request.get_json(silent=True)
+        data = request.get_json()
 
-        if not data:
-            conn.close()
-            return jsonify({"error": "Invalid request data"}), 400
-
-        title = data.get("title")
+        task_name = data.get("name") or data.get("title")
         deadline = data.get("deadline")
         priority = data.get("priority")
 
-        if not title or not deadline or not priority:
-            conn.close()
+        if not task_name or not deadline or not priority:
             return jsonify({"error": "Missing fields"}), 400
 
         cursor.execute("""
-            INSERT INTO tasks (subject_id, title, deadline, priority)
-            VALUES (%s, %s, %s, %s)
-        """, (subject_id, title, deadline, priority))
+            INSERT INTO tasks (subject_id, task_name, deadline, priority, completed)
+            VALUES (%s, %s, %s, %s, 0)
+        """, (subject_id, task_name, deadline, priority))
 
         conn.commit()
+        return jsonify({"message": "Task added"})
 
+    # GET tasks
     cursor.execute("""
-        SELECT * FROM tasks
-        WHERE subject_id=%s
+        SELECT id, task_name AS name, deadline, priority, completed
+        FROM tasks
+        WHERE subject_id = %s
         ORDER BY
-            CASE priority
-                WHEN 'High' THEN 1
-                WHEN 'Medium' THEN 2
-                WHEN 'Low' THEN 3
-            END,
-            deadline ASC
+          CASE priority
+            WHEN 'High' THEN 1
+            WHEN 'Medium' THEN 2
+            WHEN 'Low' THEN 3
+          END,
+          deadline
     """, (subject_id,))
 
     tasks = cursor.fetchall()
-    conn.close()
+    return jsonify({"tasks": tasks})
 
-    return jsonify(tasks)
 
 # -------------------------
 # MARK TASK DONE
 # -------------------------
-@app.route("/api/task/done/<int:task_id>", methods=["POST"])
-def mark_done(task_id):
+@app.route("/api/tasks/update/<int:task_id>", methods=["PUT"])
+def update_task(task_id):
+    data = request.get_json()
+    completed = data.get("completed", False)
+
     conn = get_db_connection()
     cursor = conn.cursor()
+
     cursor.execute(
-        "UPDATE tasks SET completed=TRUE WHERE id=%s",
-        (task_id,)
+        "UPDATE tasks SET completed=%s WHERE id=%s",
+        (completed, task_id)
     )
     conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+
+    return jsonify({"message": "Updated"})
 
 # -------------------------
 # DELETE TASK
 # -------------------------
-@app.route("/api/task/delete/<int:task_id>", methods=["DELETE"])
+@app.route("/api/tasks/delete/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
     conn = get_db_connection()
     cursor = conn.cursor()
+
     cursor.execute("DELETE FROM tasks WHERE id=%s", (task_id,))
     conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+
+    return jsonify({"message": "Deleted"})
+
 
 # -------------------------
 # RUN (Render uses gunicorn)

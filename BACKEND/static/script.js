@@ -9,40 +9,46 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ---------------- SUBJECTS ---------------- */
-function loadSubjects() {
-    fetch("/api/subjects")
-        .then(res => res.json())
-        .then(data => {
-            const list = document.getElementById("subjectList");
-            list.innerHTML = "";
+async function loadSubjects() {
+    try {
+        const res = await fetch('/api/subjects');
+        const data = await res.json();
 
-            data.subjects.forEach(subject => {
-                const li = document.createElement("li");
+        if (!data.subjects) {
+            console.error("Invalid response:", data);
+            return;
+        }
 
-                li.innerHTML = `
-                    <div class="subject-header">
-                        <strong style="cursor:pointer"
-                            onclick="selectSubject(${subject.id}, '${subject.name}')">
-                            ${subject.name}
-                        </strong>
-                        <button class="subject-delete"
-                            onclick="deleteSubject(${subject.id})">
-                            Delete
-                        </button>
-                    </div>
+        const list = document.getElementById('subjectList');
+        list.innerHTML = '';
 
-                    <div class="progress-bar">
-                        <div class="progress" style="width:${subject.progress}%"></div>
-                    </div>
-                    <small>${subject.progress}% completed</small>
-                `;
+        data.subjects.forEach(subject => {
+            const li = document.createElement('li');
 
-                list.appendChild(li);
-            });
+            li.innerHTML = `
+                <div class="subject-header">
+                    <strong style="cursor:pointer"
+                        onclick="selectSubject(${subject.id}, '${subject.name}')">
+                        ${subject.name}
+                    </strong>
+                    <button onclick="deleteSubject(${subject.id})">Delete</button>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress" style="width:${subject.progress}%"></div>
+                </div>
+                <small>${subject.progress}% completed</small>
+            `;
+
+            list.appendChild(li);
         });
+
+    } catch (err) {
+        console.error("Load subjects failed:", err);
+    }
 }
 
-window.addSubject = async function () {
+async function addSubject() {
     const input = document.getElementById("subjectInput");
     const name = input.value.trim();
 
@@ -64,16 +70,13 @@ window.addSubject = async function () {
 
     input.value = "";
     loadSubjects();
-};
+}
 
-function deleteSubject(id) {
-    fetch(`/api/subjects/${id}`, { method: "DELETE" })
-        .then(() => {
-            currentSubjectId = null;
-            document.getElementById("taskList").innerHTML = "";
-            document.getElementById("taskTitle").innerText = "Tasks";
-            loadSubjects();
-        });
+async function deleteSubject(id) {
+    await fetch(`/api/subjects/${id}`, { method: "DELETE" });
+    currentSubjectId = null;
+    document.getElementById("taskList").innerHTML = "";
+    loadSubjects();
 }
 
 /* ---------------- TASKS ---------------- */
@@ -83,114 +86,56 @@ function selectSubject(id, name) {
     loadTasks();
 }
 
-function loadTasks() {
+async function loadTasks() {
     if (!currentSubjectId) return;
 
-    const searchText =
-        document.getElementById("searchInput").value.toLowerCase();
-    const selectedDate =
-        document.getElementById("calendarFilter").value;
+    const res = await fetch(`/api/tasks/${currentSubjectId}`);
+    const data = await res.json();
 
-    fetch(`/api/tasks/${currentSubjectId}`)
-        .then(res => res.json())
-        .then(data => {
-            let tasks = data.tasks;
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
 
-            if (searchText) {
-                tasks = tasks.filter(t =>
-                    t.name.toLowerCase().includes(searchText)
-                );
-            }
+    if (!data.tasks) return;
 
-            if (selectedDate) {
-                tasks = tasks.filter(t =>
-                    t.deadline === selectedDate
-                );
-            }
+    data.tasks.forEach(task => {
+        const li = document.createElement("li");
 
-            const priorityOrder = { High: 1, Medium: 2, Low: 3 };
-            tasks.sort((a, b) => {
-                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-                    return priorityOrder[a.priority] - priorityOrder[b.priority];
-                }
-                return new Date(a.deadline) - new Date(b.deadline);
-            });
+        li.innerHTML = `
+            <strong>${task.name}</strong><br>
+            Deadline: ${task.deadline}<br>
+            Priority: ${task.priority}<br>
 
-            const list = document.getElementById("taskList");
-            list.innerHTML = "";
+            <button onclick="toggleTask(${task.id}, ${!task.completed})">
+                ${task.completed ? "Undo" : "Done"}
+            </button>
+            <button onclick="startEditTask(${task.id},
+                '${task.name}','${task.deadline}','${task.priority}')">
+                Edit
+            </button>
+            <button onclick="deleteTask(${task.id})">Delete</button>
+        `;
 
-            tasks.forEach(task => {
-                const li = document.createElement("li");
-                li.className = "task-item";
-                if (task.completed) li.classList.add("completed");
-
-                li.innerHTML = `
-                    <strong>${task.name}</strong><br>
-                    Deadline: ${task.deadline}<br>
-                    Priority: ${task.priority}<br>
-
-                    <button onclick="toggleTask(${task.id}, ${!task.completed})">
-                        ${task.completed ? "Undo" : "Done"}
-                    </button>
-
-                    <button onclick="startEditTask(
-                        ${task.id},
-                        '${task.name}',
-                        '${task.deadline}',
-                        '${task.priority}'
-                    )">Edit</button>
-
-                    <button onclick="deleteTask(${task.id})">Delete</button>
-                `;
-
-                list.appendChild(li);
-            });
-        });
+        list.appendChild(li);
+    });
 }
 
-window.addTask = function () {
-    if (!currentSubjectId) {
-        alert("Select a subject first");
-        return;
-    }
-
-    const name = document.getElementById("taskName").value.trim();
+async function addTask() {
+    const name = document.getElementById("taskName").value;
     const deadline = document.getElementById("taskDeadline").value;
     const priority = document.getElementById("taskPriority").value;
 
-    if (!name || !deadline || !priority) {
-        alert("Fill all fields");
-        return;
-    }
+    if (!name || !deadline || !priority || !currentSubjectId) return;
 
-    /* EDIT MODE */
-    if (editTaskId) {
-        fetch(`/api/tasks/edit/${editTaskId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, deadline, priority })
-        })
-        .then(() => {
-            editTaskId = null;
-            clearTaskInputs();
-            loadTasks();
-            loadSubjects();
-        });
-        return;
-    }
-
-    /* ADD MODE */
-    fetch(`/api/tasks/${currentSubjectId}`, {
+    await fetch(`/api/tasks/${currentSubjectId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, deadline, priority })
-    })
-    .then(() => {
-        clearTaskInputs();
-        loadTasks();
-        loadSubjects();
     });
-};
+
+    clearTaskInputs();
+    loadTasks();
+    loadSubjects();
+}
 
 function startEditTask(id, name, deadline, priority) {
     editTaskId = id;
@@ -199,24 +144,21 @@ function startEditTask(id, name, deadline, priority) {
     document.getElementById("taskPriority").value = priority;
 }
 
-function toggleTask(id, completed) {
-    fetch(`/api/tasks/update/${id}`, {
+async function toggleTask(id, completed) {
+    await fetch(`/api/tasks/update/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completed })
-    })
-    .then(() => {
-        loadTasks();
-        loadSubjects();
     });
+
+    loadTasks();
+    loadSubjects();
 }
 
-function deleteTask(id) {
-    fetch(`/api/tasks/delete/${id}`, { method: "DELETE" })
-        .then(() => {
-            loadTasks();
-            loadSubjects();
-        });
+async function deleteTask(id) {
+    await fetch(`/api/tasks/delete/${id}`, { method: "DELETE" });
+    loadTasks();
+    loadSubjects();
 }
 
 function clearTaskInputs() {
